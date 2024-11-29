@@ -1,0 +1,56 @@
+version: '3.8'
+# services:
+#   db:
+#     restart: always
+#     image: database_db
+#     container_name: database_db
+#     networks:
+#       - my-global-network
+#     environment:
+#       POSTGRES_DB: database_test
+#       POSTGRES_USER: user
+#       POSTGRES_PASSWORD: password
+#     ports:
+#       - "15432:5432"
+#     volumes:
+#       - pgdata:/var/lib/postgresql/data
+#       - ./src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+  
+services:
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: database
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/database
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
+
+volumes:
+  mysql_data:
+
+networks:
+  my-global-network:
+    driver: bridge
